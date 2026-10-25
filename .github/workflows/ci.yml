@@ -1,0 +1,155 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Every job runs offline: stub model, rule extractor, local SQLite memory.
+  # No ollama, no key, no Google Cloud project, no network calls.
+  CONCIERGE_PROVIDER: stub
+  CONCIERGE_MEMORY: local
+
+jobs:
+  lint:
+    name: Lint (ruff + mypy + bandit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Install dependencies
+        run: poetry install --no-interaction
+      - name: ruff check
+        run: poetry run ruff check travel_concierge tests examples services.py
+      - name: ruff format --check
+        run: poetry run ruff format --check travel_concierge tests examples services.py
+      - name: mypy
+        run: poetry run mypy travel_concierge services.py
+      - name: bandit
+        run: poetry run bandit -c pyproject.toml -q -r travel_concierge services.py
+
+  audit:
+    name: pip-audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Install dependencies (incl. the Vertex extra)
+        run: poetry install --no-interaction --no-root --all-extras
+      - name: pip-audit
+        run: |
+          # pip is tooling, not a shipped dependency: upgrade it so its own advisories don't fail the audit.
+          poetry run python -m pip install --upgrade -q pip
+          # CVE-2026-114603 (opentelemetry-api tracestate parsing, fixed in 1.45.1): google-adk 2.13
+          # pins opentelemetry-api <=1.44, so the fix can't be installed yet. See SECURITY.md.
+          poetry run pip-audit --ignore-vuln CVE-2026-114603
+
+  test:
+    name: Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    env:
+      CONCIERGE_MEMORY_DB: ${{ github.workspace }}/.ci/memory.sqlite3
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Install dependencies
+        run: poetry install --no-interaction
+      - name: Run pytest (both backends; Vertex on a fake client, no network)
+        run: poetry run pytest -q
+      - name: Quickstart (six sessions, offline, with checks)
+        run: poetry run python -m examples.quickstart
+      - name: CLI across processes (memory survives in SQLite)
+        run: |
+          poetry run python -m travel_concierge --user ci "I'm vegan and I always want a window seat."
+          poetry run python -m travel_concierge --user ci --json "Plan a weekend in Porto." > out.json
+          poetry run python -m travel_concierge --user ci --memories --json > mem.json
+          poetry run python -m travel_concierge --user ci --forget --json > forget.json
+          python - <<'PY'
+          import json
+          reply = json.load(open("out.json"))["reply"]
+          assert "window seat" in reply and "vegan" in reply, reply
+          memories = json.load(open("mem.json"))["memories"]
+          assert sorted(memories) == ["The user is vegan.", "The user prefers window seats."], memories
+          assert json.load(open("forget.json"))["deleted"] == 2
+          print("cli ok:", memories)
+          PY
+      - name: Build the wheel and check py.typed is inside
+        run: |
+          poetry build -q
+          python - <<'PY'
+          import glob, zipfile
+          names = zipfile.ZipFile(glob.glob("dist/*.whl")[0]).namelist()
+          assert any(n.endswith("travel_concierge/py.typed") for n in names), names
+          assert any(n.endswith("travel_concierge/memory/vertex.py") for n in names), names
+          print("wheel ok:", len(names), "files")
+          PY
+
+  adk-cli:
+    name: ADK CLI (adk run, adk web) on the local Memory Bank
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Install dependencies
+        run: poetry install --no-interaction
+      - name: adk run, twice, sharing memory through localbank://
+        run: |
+          URI="localbank://$PWD/.adk/memory.sqlite3"
+          echo "I always want an aisle seat." | poetry run adk run travel_concierge --memory_service_uri="$URI"
+          echo "Plan a weekend in Rome." | poetry run adk run travel_concierge --memory_service_uri="$URI" | tee run.txt
+          grep -q "an aisle seat" run.txt
+      - name: adk web (API server answers /list-apps and /run with recall)
+        run: |
+          poetry run adk web --host 127.0.0.1 --port 8765 \
+            --memory_service_uri="localbank://$PWD/.adk/web.sqlite3" . > web.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf 127.0.0.1:8765/list-apps && break; sleep 1; done
+          curl -sf 127.0.0.1:8765/list-apps | grep -q travel_concierge
+          for s in s1 s2; do
+            curl -sf -X POST 127.0.0.1:8765/apps/travel_concierge/users/ci/sessions/$s \
+              -H 'content-type: application/json' -d '{}' > /dev/null
+          done
+          run() {
+            curl -sf -X POST 127.0.0.1:8765/run -H 'content-type: application/json' -d "{
+              \"appName\": \"travel_concierge\", \"userId\": \"ci\", \"sessionId\": \"$1\",
+              \"newMessage\": {\"role\": \"user\", \"parts\": [{\"text\": \"$2\"}]}
+            }"
+          }
+          run s1 "I am vegetarian." > first.json
+          run s2 "Plan a weekend in Rome." > events.json
+          python - <<'PY'
+          import json
+          events = json.load(open("events.json"))
+          text = " ".join(p.get("text", "") for e in events for p in (e.get("content") or {}).get("parts", []))
+          assert "vegetarian" in text, text
+          print("adk web ok: session s2 recalled s1 through memory")
+          PY
+          kill %1 || true

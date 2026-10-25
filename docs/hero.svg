@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#a78bfa"/>
+    </marker>
+    <marker id="arrowdim" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+  <rect width="1280" height="640" fill="#0b1020"/>
+  <g font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif">
+    <text x="80" y="112" font-size="58" font-weight="700" fill="#f8fafc">adk-vertex-memory-bank</text>
+    <text x="80" y="162" font-size="26" fill="#94a3b8">A Google ADK travel concierge that remembers each user across sessions.</text>
+    <text x="80" y="198" font-size="26" fill="#94a3b8">Vertex AI Memory Bank, or a free local look-alike: one env var. Runs 100% locally.</text>
+
+    <!-- sessions -->
+    <g font-family="'JetBrains Mono', Menlo, monospace" font-size="16">
+      <text x="80" y="262" fill="#64748b">sessions (short-term)</text>
+      <rect x="80" y="278" width="300" height="78" rx="12" fill="#111827" stroke="#334155" stroke-width="2"/>
+      <text x="100" y="308" fill="#e2e8f0">#1  "aisle seat, I'm</text>
+      <text x="139" y="334" fill="#e2e8f0">vegetarian, SFO"</text>
+      <rect x="80" y="372" width="300" height="78" rx="12" fill="#111827" stroke="#334155" stroke-width="2"/>
+      <text x="100" y="402" fill="#e2e8f0">#2  "plan Lisbon"</text>
+      <text x="139" y="428" fill="#a78bfa">→ aisle · veggie · SFO</text>
+      <rect x="80" y="466" width="300" height="78" rx="12" fill="#111827" stroke="#334155" stroke-width="2"/>
+      <text x="100" y="496" fill="#e2e8f0">#3  "window seats now"</text>
+      <text x="139" y="522" fill="#a78bfa">→ seat UPDATED</text>
+    </g>
+
+    <!-- agent -->
+    <rect x="450" y="300" width="330" height="220" rx="16" fill="#0f1a2e" stroke="#a78bfa" stroke-width="2.5"/>
+    <text x="615" y="338" font-size="22" font-weight="700" fill="#f8fafc" text-anchor="middle">LlmAgent concierge</text>
+    <g font-family="'JetBrains Mono', Menlo, monospace" font-size="16" fill="#cbd5e1">
+      <text x="474" y="378">preload_memory</text>
+      <text x="474" y="408">load_memory</text>
+      <text x="474" y="438">memory_firewall</text>
+      <text x="474" y="468">save_to_memory</text>
+      <text x="474" y="498">forget_me</text>
+      <g fill="#a78bfa">
+        <text x="680" y="378">recall</text>
+        <text x="680" y="408">search</text>
+        <text x="680" y="438">defuse</text>
+        <text x="680" y="468">write</text>
+        <text x="680" y="498">erase</text>
+      </g>
+    </g>
+
+    <!-- memory service -->
+    <rect x="850" y="262" width="360" height="296" rx="16" fill="none" stroke="#1e293b" stroke-width="2"/>
+    <text x="870" y="292" font-size="16" fill="#64748b" font-family="'JetBrains Mono', Menlo, monospace">BaseMemoryService (long-term)</text>
+    <rect x="870" y="308" width="320" height="104" rx="12" fill="#111827" stroke="#a78bfa" stroke-width="2"/>
+    <text x="890" y="338" font-size="20" font-weight="700" fill="#f8fafc">LocalMemoryBank</text>
+    <text x="890" y="364" font-size="15" fill="#cbd5e1" font-family="'JetBrains Mono', Menlo, monospace">SQLite · LLM fact extraction</text>
+    <text x="890" y="388" font-size="15" fill="#cbd5e1" font-family="'JetBrains Mono', Menlo, monospace">consolidation · BM25 · TTL</text>
+    <rect x="870" y="432" width="320" height="104" rx="12" fill="#111827" stroke="#334155" stroke-width="2" stroke-dasharray="6 5"/>
+    <text x="890" y="462" font-size="20" font-weight="700" fill="#e2e8f0">VertexAiMemoryBankService</text>
+    <text x="890" y="488" font-size="15" fill="#94a3b8" font-family="'JetBrains Mono', Menlo, monospace">Agent Engine Memory Bank</text>
+    <text x="890" y="512" font-size="15" fill="#94a3b8" font-family="'JetBrains Mono', Menlo, monospace">CONCIERGE_MEMORY=vertex ($)</text>
+
+    <!-- arrows -->
+    <line x1="384" y1="410" x2="444" y2="410" stroke="#a78bfa" stroke-width="2.5" marker-end="url(#arrow)"/>
+    <line x1="784" y1="370" x2="864" y2="360" stroke="#a78bfa" stroke-width="2.5" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+    <line x1="784" y1="460" x2="864" y2="484" stroke="#64748b" stroke-width="2" stroke-dasharray="5 5" marker-end="url(#arrowdim)" marker-start="url(#arrowdim)"/>
+
+    <text x="80" y="600" font-size="19" fill="#64748b">same agent, same contract tests on both backends · ollama by default · prompt-injection firewall on recall</text>
+  </g>
+</svg>
