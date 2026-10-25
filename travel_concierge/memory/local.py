@@ -164,8 +164,15 @@ class LocalMemoryBank(BaseMemoryService):
         self.last_generated: list[Generated] = []
 
     def close(self) -> None:
+        """Close the SQLite connection (idempotent)."""
         with self._lock:
             self._conn.close()
+
+    def __del__(self) -> None:
+        # A bank dropped without close() (e.g. by ADK's CLIs) still releases its file.
+        conn = getattr(self, "_conn", None)
+        if conn is not None:
+            conn.close()
 
     # ------------------------------------------------------------------ #
     # BaseMemoryService

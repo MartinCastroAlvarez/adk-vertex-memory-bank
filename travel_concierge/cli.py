@@ -112,7 +112,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             return 2
         concierge = Concierge(settings=settings)
-        return asyncio.run(_run(args, concierge))
+        try:
+            return asyncio.run(_run(args, concierge))
+        finally:
+            concierge.close()
     except (ConfigError, ScopeError, MemoryUnsupportedError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

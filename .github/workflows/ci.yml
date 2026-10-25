@@ -124,8 +124,8 @@ jobs:
       - name: adk run, twice, sharing memory through localbank://
         run: |
           URI="localbank://$PWD/.adk/memory.sqlite3"
-          echo "I always want an aisle seat." | poetry run adk run travel_concierge --memory_service_uri="$URI"
-          echo "Plan a weekend in Rome." | poetry run adk run travel_concierge --memory_service_uri="$URI" | tee run.txt
+          printf 'I always want an aisle seat.\nexit\n' | poetry run adk run travel_concierge --memory_service_uri="$URI"
+          printf 'Plan a weekend in Rome.\nexit\n' | poetry run adk run travel_concierge --memory_service_uri="$URI" | tee run.txt
           grep -q "an aisle seat" run.txt
       - name: adk web (API server answers /list-apps and /run with recall)
         run: |

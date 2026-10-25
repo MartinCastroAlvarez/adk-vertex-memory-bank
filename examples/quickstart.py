@@ -22,7 +22,11 @@ async def main() -> None:
         settings = Settings(
             provider="stub", extractor="rules", db_path=Path(tmp) / "memory.sqlite3"
         )
-        result = await run_demo(Concierge(settings=settings))
+        concierge = Concierge(settings=settings)
+        try:
+            result = await run_demo(concierge)
+        finally:
+            concierge.close()
 
     step = {k: v for k, v in result.items() if isinstance(v, dict)}
     assert "vegetarian" in step["step2"]["reply"], "session 2 recalls session 1"

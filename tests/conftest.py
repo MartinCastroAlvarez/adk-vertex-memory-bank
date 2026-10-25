@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 from dataclasses import field
 from typing import Any
@@ -37,6 +38,22 @@ def _no_google_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(google.auth._default, "default", refuse)
     for name in ("GOOGLE_API_KEY", "GOOGLE_GENAI_USE_VERTEXAI", "GOOGLE_CLOUD_AGENT_ENGINE_ID"):
         monkeypatch.delenv(name, raising=False)
+
+
+@pytest.fixture(autouse=True)
+def _close_local_banks(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Close every LocalMemoryBank a test opened (Python 3.13 warns on unclosed sqlite)."""
+    opened: list[LocalMemoryBank] = []
+    original = LocalMemoryBank.__init__
+
+    def tracking_init(self: LocalMemoryBank, *args: Any, **kwargs: Any) -> None:
+        original(self, *args, **kwargs)
+        opened.append(self)
+
+    monkeypatch.setattr(LocalMemoryBank, "__init__", tracking_init)
+    yield
+    for bank in opened:
+        bank.close()
 
 
 @dataclass

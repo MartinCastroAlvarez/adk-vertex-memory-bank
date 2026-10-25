@@ -79,6 +79,12 @@ class Concierge:
             memory_service=memory,
         )
 
+    def close(self) -> None:
+        """Release the memory service's resources (the local SQLite file), if it has any."""
+        close = getattr(self.memory, "close", None)
+        if callable(close):
+            close()
+
     async def chat(self, user_id: str, message: str, session_id: str | None = None) -> ChatTurn:
         """Send one message; a new ``session_id`` (the default) starts a new conversation."""
         check_scope(APP_NAME, user_id)
