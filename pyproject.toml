@@ -46,7 +46,7 @@ travel-concierge = "travel_concierge.cli:main"
 python = ">=3.11,<3.15"
 google-adk = ">=2.13,<3"
 # The range google-adk[extensions] pins for its LiteLlm wrapper (ollama).
-litellm = ">=1.84,<1.106.3"
+litellm = ">=1.84,<1.109.2"
 pydantic = ">=2.12,<3"
 # Security floor for a transitive dependency (CVE-2026-112907/-112913/-112940); it also keeps
 # the resolver off litellm releases that cap filelock below 4.
